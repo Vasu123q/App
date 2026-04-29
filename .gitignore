@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.tmp
+*.log
+catboost_info/
+.dist/
+.env
+.DS_Store
