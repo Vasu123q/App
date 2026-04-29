@@ -6,6 +6,7 @@ import os
 
 st.set_page_config(layout="wide")
 st.title(" Inventory Stones")
+
 # 🔄 Refresh button (manual)
 if st.button("🔄 Refresh Data"):
     st.cache_data.clear()
@@ -21,12 +22,6 @@ def load_data():
         "L2": pd.read_excel(xls, "Level_2"),
         "L3": pd.read_excel(xls, "Level_3"),
     }
-
-
-
-
-
-# 🔍 Detect file change
 
 
 file_path = "Final_Predicted.xlsx"
@@ -65,14 +60,16 @@ def render_tab(df, tab):
 
     # ================= FILTER =================
     st.markdown("## Filters")
+    color_col = "Color-ranges" if "Color-ranges" in df.columns else "Color"
+    clarity_col = "Clarity-ranges" if "Clarity-ranges" in df.columns else "Clarity"
 
     with st.form(k(tab,"filter")):
 
         c1,c2,c3,c4,c5 = st.columns(5)
 
         shape = c1.multiselect("Shape", safe_unique(df,"Shape"), key=k(tab,"shape"))
-        color = c2.multiselect("Color", safe_unique(df,"Color"), key=k(tab,"color"))
-        clarity = c3.multiselect("Clarity", safe_unique(df,"Clarity"), key=k(tab,"clarity"))
+        color = c2.multiselect(f"{color_col}", safe_unique(df, color_col), key=k(tab,"color"))
+        clarity = c3.multiselect(f"{clarity_col}", safe_unique(df, clarity_col), key=k(tab,"clarity"))
         cut = c4.multiselect("Cut", safe_unique(df,"Cut"), key=k(tab,"cut"))
         lab = c5.multiselect("Lab", safe_unique(df,"Lab"), key=k(tab,"lab"))
 
@@ -105,8 +102,8 @@ def render_tab(df, tab):
 
     if apply:
         if shape: filtered = filtered[filtered["Shape"].isin(shape)]
-        if color: filtered = filtered[filtered["Color"].isin(color)]
-        if clarity: filtered = filtered[filtered["Clarity"].isin(clarity)]
+        if color: filtered = filtered[filtered[color_col].isin(color)]
+        if clarity: filtered = filtered[filtered[clarity_col].isin(clarity)]
         if cut: filtered = filtered[filtered["Cut"].isin(cut)]
         if lab: filtered = filtered[filtered["Lab"].isin(lab)]
         if polish: filtered = filtered[filtered["Polish"].isin(polish)]
@@ -125,6 +122,7 @@ def render_tab(df, tab):
             (filtered["Ratio"]>=ratio_from) &
             (filtered["Ratio"]<=ratio_to)
         ]
+  
 
     # ================= DISTRIBUTION =================
     st.markdown("## Distribution")
@@ -132,8 +130,8 @@ def render_tab(df, tab):
     d1,d2,d3 = st.columns(3)
 
     d1.plotly_chart(clean_pie(filtered,"Shape"), use_container_width=True, key=k(tab,"pie1"))
-    d2.plotly_chart(clean_pie(filtered,"Color"), use_container_width=True, key=k(tab,"pie2"))
-    d3.plotly_chart(clean_pie(filtered,"Clarity"), use_container_width=True, key=k(tab,"pie3"))
+    d2.plotly_chart(clean_pie(filtered, color_col), use_container_width=True, key=k(tab,"pie2"))
+    d3.plotly_chart(clean_pie(filtered, clarity_col), use_container_width=True, key=k(tab,"pie3"))
 
     # ================= SIZE RANGE =================
     st.markdown("## Size Range Distribution")
@@ -194,8 +192,8 @@ def render_tab(df, tab):
         c1,c2,c3,c4 = st.columns(4)
 
         s_shape = c1.selectbox("Shape", ["Select"] + safe_unique(df,"Shape"))
-        s_color = c2.selectbox("Color", ["Select"] + safe_unique(df,"Color"))
-        s_clarity = c3.selectbox("Clarity", ["Select"] + safe_unique(df,"Clarity"))
+        s_color = c2.selectbox(f"{color_col}", ["Select"] + safe_unique(df, color_col))
+        s_clarity = c3.selectbox(f"{clarity_col}", ["Select"] + safe_unique(df, clarity_col))
         s_size = c4.selectbox("Carat Range", ["Select"] + safe_unique(df,"Size ranges"))
 
         apply4 = st.form_submit_button("Apply")
@@ -206,8 +204,8 @@ def render_tab(df, tab):
 
         temp = df[
             (df["Shape"].astype(str)==s_shape) &
-            (df["Color"].astype(str)==s_color) &
-            (df["Clarity"].astype(str)==s_clarity) &
+            (df[color_col].astype(str)==s_color) &
+            (df[clarity_col].astype(str)==s_clarity) &
             (df["Size ranges"].astype(str)==s_size)
         ].copy()
 
@@ -231,7 +229,7 @@ def render_tab(df, tab):
         # Use REAL sizes
         temp = temp.sort_values("Size")
 
-        # 🔥 KEY: group by Size to avoid duplicates
+
         temp_grouped = temp.groupby("Size")["Demand_Level"].mean().reset_index()
 
         # Smooth slightly
@@ -276,8 +274,8 @@ def render_tab(df, tab):
         c1,c2,c3,c4,c5 = st.columns(5)
 
         p1 = c1.selectbox("Shape", ["Select"]+safe_unique(df,"Shape"), key=k(tab,"p1"))
-        p2 = c2.selectbox("Color", ["Select"]+safe_unique(df,"Color"), key=k(tab,"p2"))
-        p3 = c3.selectbox("Clarity", ["Select"]+safe_unique(df,"Clarity"), key=k(tab,"p3"))
+        p2 = c2.selectbox(f"{color_col}", ["Select"]+safe_unique(df, color_col), key=k(tab,"p2"))
+        p3 = c3.selectbox(f"{clarity_col}", ["Select"]+safe_unique(df, clarity_col), key=k(tab,"p3"))
         p4 = c4.selectbox("Carat", ["Select"]+safe_unique(df,"Size ranges"), key=k(tab,"p4"))
         p5 = c5.selectbox("Fluorescence", ["Select"]+safe_unique(df,"Fluorescence"), key=k(tab,"p5"))
 
@@ -287,8 +285,8 @@ def render_tab(df, tab):
 
         temp = df[
             (df["Shape"].astype(str)==p1) &
-            (df["Color"].astype(str)==p2) &
-            (df["Clarity"].astype(str)==p3) &
+            (df[color_col].astype(str)==p2) &
+            (df[clarity_col].astype(str)==p3) &
             (df["Size ranges"].astype(str)==p4) &
             (df["Fluorescence"].astype(str)==p5)
         ]
@@ -320,8 +318,8 @@ def render_tab(df, tab):
         c1,c2,c3,c4 = st.columns(4)
 
         a1 = c1.selectbox("Shape", ["Select"]+safe_unique(df,"Shape"), key=k(tab,"a1"))
-        a2 = c2.selectbox("Color", ["Select"]+safe_unique(df,"Color"), key=k(tab,"a2"))
-        a3 = c3.selectbox("Clarity", ["Select"]+safe_unique(df,"Clarity"), key=k(tab,"a3"))
+        a2 = c2.selectbox(f"{color_col}", ["Select"]+safe_unique(df, color_col), key=k(tab,"a2"))
+        a3 = c3.selectbox(f"{clarity_col}", ["Select"]+safe_unique(df, clarity_col), key=k(tab,"a3"))
         a4 = c4.selectbox("Carat", ["Select"]+safe_unique(df,"Size ranges"), key=k(tab,"a4"))
 
         go_age = st.form_submit_button("Apply")
@@ -330,8 +328,8 @@ def render_tab(df, tab):
 
         temp = df[
             (df["Shape"].astype(str)==a1) &
-            (df["Color"].astype(str)==a2) &
-            (df["Clarity"].astype(str)==a3) &
+            (df[color_col].astype(str)==a2) &
+            (df[clarity_col].astype(str)==a3) &
             (df["Size ranges"].astype(str)==a4)
         ]
 
@@ -346,6 +344,7 @@ def render_tab(df, tab):
     # ================= DATA =================
     st.markdown("## Data")
     st.dataframe(filtered, use_container_width=True)
+    
 
 
 # ================= RUN =================
