@@ -1,4 +1,4 @@
-import streamlit as st
+    import streamlit as st
 import pandas as pd
 import os
 
@@ -10,16 +10,10 @@ if st.button("🔄 Refresh Data"):
     st.rerun()
 
 # ================= LOAD (cached) =================
-@st.cache_data(ttl=60)  # cache expires after 60s (no auto rerun)
+@st.cache_data(ttl=60)  
 def load_data():
     xls = pd.ExcelFile("Final_Predicted.xlsx")
     return pd.read_excel(xls, "Level_1")
-
-
-
-
-# 🔍 Detect file change
-
 
 file_path = "Final_Predicted.xlsx"
 last_modified = os.path.getmtime(file_path)
@@ -87,6 +81,9 @@ if not apply:
 # ================= LOCATION FILTER =================
 if loc:
     filtered = df[df["Stone Location"].isin(loc)]
+    if filtered.empty:
+        st.warning("⚠️ No stones found for selected locations")
+        st.stop()
     locations = [l.upper() for l in loc]
 else:
     filtered = df.copy()
@@ -142,9 +139,14 @@ for loc_name in locations:
 summary = pd.DataFrame(summary_list)
 
 # ================= TOTAL ROW =================
-total_row = summary.sum(numeric_only=True)
+total_row = summary.select_dtypes(include='number').sum()
 total_row["Location"] = "Total"
-summary = pd.concat([summary, pd.DataFrame([total_row])], ignore_index=True)
+
+summary = pd.concat(
+    [summary, pd.DataFrame([total_row])],
+    ignore_index=True
+)
+
 
 # ================= COLUMN FILTER =================
 if category:
