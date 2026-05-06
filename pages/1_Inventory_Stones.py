@@ -122,29 +122,52 @@ def render_tab(df, tab):
             (filtered["Ratio"]>=ratio_from) &
             (filtered["Ratio"]<=ratio_to)
         ]
+        if filtered.empty:
+            st.warning("⚠️ No stones found for selected filters")
   
 
     # ================= DISTRIBUTION =================
     st.markdown("## Distribution")
 
-    d1,d2,d3 = st.columns(3)
+    if not filtered.empty:
 
-    d1.plotly_chart(clean_pie(filtered,"Shape"), use_container_width=True, key=k(tab,"pie1"))
-    d2.plotly_chart(clean_pie(filtered, color_col), use_container_width=True, key=k(tab,"pie2"))
-    d3.plotly_chart(clean_pie(filtered, clarity_col), use_container_width=True, key=k(tab,"pie3"))
+        d1,d2,d3 = st.columns(3)
+
+        d1.plotly_chart(clean_pie(filtered,"Shape"), use_container_width=True, key=k(tab,"pie1"))
+        d2.plotly_chart(clean_pie(filtered, color_col), use_container_width=True, key=k(tab,"pie2"))
+        d3.plotly_chart(clean_pie(filtered, clarity_col), use_container_width=True, key=k(tab,"pie3"))
+
+    else:
+        st.warning("⚠️ No data available for distribution charts")
 
     # ================= SIZE RANGE =================
     st.markdown("## Size Range Distribution")
 
-    size_data = filtered["Size ranges"].value_counts().sort_index()
+    if not filtered.empty:
 
-    fig_size = px.bar(
-        x=size_data.index,
-        y=size_data.values,
-        labels={"x":"Carat Range","y":"Count"}
-    )
+        size_data = (
+            filtered["Size ranges"]
+            .value_counts()
+            .sort_index()
+            .reset_index()
+        )
 
-    st.plotly_chart(fig_size, use_container_width=True, key=k(tab,"size"))
+        size_data.columns = ["Carat Range", "Count"]
+
+        fig_size = px.bar(
+            size_data,
+            x="Carat Range",
+            y="Count"
+        )
+
+        st.plotly_chart(
+            fig_size,
+            use_container_width=True,
+            key=k(tab,"size")
+        )
+
+    else:
+        st.warning("No data available for selected filters")
 
     # ================= SALES OVERVIEW =================
     st.markdown("## Sales Overview")
@@ -263,11 +286,18 @@ def render_tab(df, tab):
             height=500
         )
 
+        
+
         st.plotly_chart(fig, use_container_width=True)
 
+    elif temp is not None and temp.empty:
+            st.warning("⚠️ No stone with these attributes exists in inventory")
 
     # ================= SALES PROB =================
     st.markdown("## Sales Probability")
+
+    if k(tab,"prob_data") not in st.session_state:
+        st.session_state[k(tab,"prob_data")] = None
 
     with st.form(k(tab,"prob")):
 
@@ -284,14 +314,20 @@ def render_tab(df, tab):
     if go_prob and "Select" not in [p1,p2,p3,p4,p5]:
 
         temp = df[
-            (df["Shape"].astype(str)==p1) &
-            (df[color_col].astype(str)==p2) &
-            (df[clarity_col].astype(str)==p3) &
-            (df["Size ranges"].astype(str)==p4) &
-            (df["Fluorescence"].astype(str)==p5)
+                (df["Shape"].astype(str)==p1) &
+                (df[color_col].astype(str)==p2) &
+                (df[clarity_col].astype(str)==p3) &
+                (df["Size ranges"].astype(str)==p4) &
+                (df["Fluorescence"].astype(str)==p5)
         ]
 
-        st.dataframe(temp[[
+        st.session_state[k(tab,"prob_data")] = temp
+
+    temp = st.session_state[k(tab,"prob_data")]
+
+    if temp is not None and not temp.empty:
+
+            st.dataframe(temp[[
             "Shape","Color","Clarity","Size",
             "ML_Sales_Prob",
             "Probability_Sell_(0-30)_Days",
@@ -310,9 +346,13 @@ def render_tab(df, tab):
             'Expected_Days_to_sell':'Expected Days to sell',
         }), use_container_width=True)
 
+    elif temp is not None and temp.empty:
+            st.warning("⚠️ No stone with these attributes exists in inventory")
+
     # ================= AGING =================
     st.markdown("## Aging Risk")
-
+    if k(tab,"aging_data") not in st.session_state:
+        st.session_state[k(tab,"aging_data")] = None
     with st.form(k(tab,"aging")):
 
         c1,c2,c3,c4 = st.columns(4)
@@ -324,14 +364,20 @@ def render_tab(df, tab):
 
         go_age = st.form_submit_button("Apply")
 
-    if go_age and "Select" not in [a1,a2,a3,a4]:
+        if go_age and "Select" not in [a1,a2,a3,a4]:
 
-        temp = df[
-            (df["Shape"].astype(str)==a1) &
-            (df[color_col].astype(str)==a2) &
-            (df[clarity_col].astype(str)==a3) &
-            (df["Size ranges"].astype(str)==a4)
-        ]
+            temp = df[
+                (df["Shape"].astype(str)==a1) &
+                (df[color_col].astype(str)==a2) &
+                (df[clarity_col].astype(str)==a3) &
+                (df["Size ranges"].astype(str)==a4)
+            ]
+
+            st.session_state[k(tab,"aging_data")] = temp
+
+    temp = st.session_state[k(tab,"aging_data")]
+
+    if temp is not None and not temp.empty:
 
         st.dataframe(temp[[
             "Shape","Color","Clarity","Size",
@@ -341,9 +387,16 @@ def render_tab(df, tab):
             'ML_Aging_Risk_Score':'Aging Risk Score',
         }), use_container_width=True)
 
+    elif temp is not None and temp.empty:
+        st.warning("⚠️ No stone with these attributes exists in inventory")
+
     # ================= DATA =================
     st.markdown("## Data")
-    st.dataframe(filtered, use_container_width=True)
+
+    if not filtered.empty:
+        st.dataframe(filtered, use_container_width=True)
+    else:
+        st.warning("⚠️ No inventory stones available")
     
 
 
